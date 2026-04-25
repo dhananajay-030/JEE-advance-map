@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JEE Advanced 2026 — Exam Centre Locator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e2d4a;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --green: #10b981;
+    --gold: #f59e0b;
+    --city-dot: #00d4ff;
+    --center-dot: #ff6b35;
+    --selected-dot: #10b981;
+    --line-color: rgba(16,185,129,0.6);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 20px 32px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: rgba(10,14,26,0.9);
+    backdrop-filter: blur(12px);
+  }
+  .logo-badge {
+    background: linear-gradient(135deg, var(--accent3), var(--accent));
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+  }
+  header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  header p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .stats-row {
+    margin-left: auto;
+    display: flex;
+    gap: 24px;
+  }
+  .stat {
+    text-align: right;
+  }
+  .stat-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: calc(100vh - 81px);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-top {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-top h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .search-wrap {
+    position: relative;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+  }
+  #citySearch {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px 10px 34px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #citySearch:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+  }
+  #citySearch::placeholder { color: var(--muted); }
+
+  .city-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .city-list::-webkit-scrollbar { width: 4px; }
+  .city-list::-webkit-scrollbar-track { background: transparent; }
+  .city-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .state-group { margin-bottom: 4px; }
+  .state-header {
+    padding: 6px 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .state-header:hover { background: var(--surface2); }
+  .state-header .chevron {
+    margin-left: auto;
+    transition: transform 0.2s;
+    font-size: 10px;
+    opacity: 0.5;
+  }
+  .state-header.collapsed .chevron { transform: rotate(-90deg); }
+  .state-cities { display: flex; flex-direction: column; gap: 1px; }
+  .state-cities.hidden { display: none; }
+
+  .city-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .city-item:hover {
+    background: var(--surface2);
+    border-color: var(--border);
+  }
+  .city-item.selected {
+    background: rgba(16,185,129,0.1);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .city-dot-indicator {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--city-dot);
+    flex-shrink: 0;
+    box-shadow: 0 0 6px var(--city-dot);
+  }
+  .city-item.selected .city-dot-indicator {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  /* RESULTS PANEL */
+  .results-panel {
+    border-top: 1px solid var(--border);
+    padding: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .results-panel.visible { display: flex; }
+  .results-panel h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .result-item {
+    padding: 8px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .result-item:hover { border-color: var(--accent2); }
+  .rank-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent2);
+    width: 20px;
+    flex-shrink: 0;
+  }
+  .result-name {
+    flex: 1;
+    color: var(--text);
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .result-dist {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+  .result-state {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* MAP AREA */
+  .map-area {
+    position: relative;
+    background: var(--bg);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .map-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  #indiaMap {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+  #indiaMap:active { cursor: grabbing; }
+
+  /* SVG map elements */
+  .state-path {
+    fill: var(--surface2);
+    stroke: var(--border);
+    stroke-width: 0.8;
+    transition: fill 0.2s;
+    cursor: pointer;
+  }
+  .state-path:hover { fill: #1e3054; }
+
+  /* City dots on map */
+  .map-city-dot {
+    cursor: pointer;
+    transition: r 0.2s;
+  }
+  .map-city-dot circle.main {
+    fill: var(--city-dot);
+    opacity: 0.85;
+  }
+  .map-city-dot circle.pulse {
+    fill: none;
+    stroke: var(--city-dot);
+    stroke-width: 1;
+    opacity: 0;
+  }
+  .map-city-dot:hover circle.main { r: 5; }
+  .map-city-dot.is-center circle.main {
+    fill: var(--center-dot);
+    r: 4.5;
+  }
+  .map-city-dot.is-center:hover circle.main { r: 6; }
+  .map-city-dot.selected-city circle.main {
+    fill: var(--green) !important;
+    r: 7 !important;
+    filter: drop-shadow(0 0 8px var(--green));
+  }
+  .map-city-dot.nearby-center circle.main {
+    fill: var(--gold) !important;
+    r: 6 !important;
+    filter: drop-shadow(0 0 6px var(--gold));
+  }
+
+  /* Connection lines */
+  .connection-line {
+    stroke: var(--line-color);
+    stroke-width: 1.2;
+    stroke-dasharray: 4 3;
+    fill: none;
+    pointer-events: none;
+    animation: dashMove 2s linear infinite;
+  }
+  @keyframes dashMove {
+    to { stroke-dashoffset: -14; }
+  }
+
+  /* Tooltip */
+  #tooltip {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 100;
+    display: none;
+    max-width: 200px;
+    box-shadow: 0 0 20px rgba(0,212,255,0.15);
+  }
+  #tooltip .t-name { font-weight: 600; color: var(--text); }
+  #tooltip .t-state { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  #tooltip .t-type {
+    margin-top: 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  #tooltip .t-type.center { background: rgba(255,107,53,0.2); color: var(--accent2); }
+  #tooltip .t-type.city { background: rgba(0,212,255,0.15); color: var(--accent); }
+  #tooltip .t-dist { margin-top: 4px; color: var(--gold); font-family: 'Space Mono', monospace; font-size: 11px; }
+
+  /* Legend */
+  .legend {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(17,24,39,0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12px;
+    z-index: 50;
+  }
+  .legend h4 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Controls */
+  .map-controls {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 50;
+  }
+  .ctrl-btn {
+    width: 32px; height: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Empty state */
+  .empty-hint {
+    padding: 20px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .empty-hint .icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
+
+  /* Pulses for selected */
+  @keyframes pulse-ring {
+    0% { r: 8; opacity: 0.8; }
+    100% { r: 18; opacity: 0; }
+  }
+  .pulse-anim { animation: pulse-ring 1.5s ease-out infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">JEE ADV</div>
+  <div>
+    <h1>Exam Centre Locator — 2026</h1>
+    <p>Select your city to find the 10 nearest JEE Advanced exam centres</p>
+  </div>
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-val" id="statCities">0</div>
+      <div class="stat-label">Cities</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statCentres">0</div>
+      <div class="stat-label">Centres</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="statStates">0</div>
+      <div class="stat-label">States/UTs</div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <h2>Select Your City</h2>
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="citySearch" placeholder="Search city or state...">
+      </div>
+    </div>
+    <div class="city-list" id="cityList"></div>
+    <div class="results-panel" id="resultsPanel">
+      <h3>🎯 Nearest 10 Centres</h3>
+    </div>
+  </div>
+
+  <div class="map-area">
+    <div class="map-container">
+      <svg id="indiaMap" viewBox="200 60 600 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- India states paths will be drawn here -->
+        <g id="statesLayer"></g>
+        <!-- Connection lines layer -->
+        <g id="linesLayer"></g>
+        <!-- City dots layer -->
+        <g id="dotsLayer"></g>
+      </svg>
+    </div>
+
+    <div class="map-controls">
+      <button class="ctrl-btn" id="zoomIn" title="Zoom In">+</button>
+      <button class="ctrl-btn" id="zoomOut" title="Zoom Out">−</button>
+      <button class="ctrl-btn" id="zoomReset" title="Reset">⌂</button>
+    </div>
+
+    <div class="legend">
+      <h4>Legend</h4>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#00d4ff;box-shadow:0 0 6px #00d4ff"></div>
+        <span>Exam City</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#10b981;box-shadow:0 0 6px #10b981"></div>
+        <span>Your City</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#f59e0b;box-shadow:0 0 6px #f59e0b"></div>
+        <span>Nearest Centre</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="t-name"></div>
+  <div class="t-state"></div>
+  <div class="t-type"></div>
+  <div class="t-dist" style="display:none"></div>
+</div>
+
+<script>
+// ============================================================
+// DATA: All JEE Advanced cities with coordinates
+// ============================================================
+const CITIES = [
+  // ANDAMAN & NICOBAR
+  {name:"PORT BLAIR",state:"ANDAMAN & NICOBAR ISLANDS",lat:11.6234,lng:92.7265},
+  // ANDHRA PRADESH
+  {name:"AMALAPURAM",state:"ANDHRA PRADESH",lat:16.5786,lng:82.0071},
+  {name:"ANANTAPUR",state:"ANDHRA PRADESH",lat:14.6819,lng:77.6006},
+  {name:"BHIMAVARAM",state:"ANDHRA PRADESH",lat:16.5449,lng:81.5212},
+  {name:"CHIRALA",state:"ANDHRA PRADESH",lat:15.8281,lng:80.3523},
+  {name:"CHITTOOR",state:"ANDHRA PRADESH",lat:13.2172,lng:79.1002},
+  {name:"ELURU",state:"ANDHRA PRADESH",lat:16.7107,lng:81.0952},
+  {name:"GUDLAVALLERU",state:"ANDHRA PRADESH",lat:16.3493,lng:81.0554},
+  {name:"GUDUR",state:"ANDHRA PRADESH",lat:14.1468,lng:79.8543},
+  {name:"GUNTUR",state:"ANDHRA PRADESH",lat:16.3067,lng:80.4365},
+  {name:"KADAPA",state:"ANDHRA PRADESH",lat:14.4673,lng:78.8242},
+  {name:"KAKINADA",state:"ANDHRA PRADESH",lat:16.9891,lng:82.2475},
+  {name:"KAVALI",state:"ANDHRA PRADESH",lat:14.9167,lng:79.9889},
+  {name:"KURNOOL",state:"ANDHRA PRADESH",lat:15.8281,lng:78.0373},
+  {name:"MACHILIPATNAM",state:"ANDHRA PRADESH",lat:16.1875,lng:81.1389},
+  {name:"MYLAVARAM",state:"ANDHRA PRADESH",lat:16.7362,lng:80.6218},
+  {name:"NARASARAOPET",state:"ANDHRA PRADESH",lat:16.2345,lng:80.0499},
+  {name:"NELLORE",state:"ANDHRA PRADESH",lat:14.4426,lng:79.9865},
+  {name:"ONGOLE",state:"ANDHRA PRADESH",lat:15.5057,lng:80.0499},
+  {name:"RAJAHMUNDRY",state:"ANDHRA PRADESH",lat:17.0005,lng:81.8040},
+  {name:"SRIKAKULAM",state:"ANDHRA PRADESH",lat:18.2949,lng:83.8938},
+  {name:"TADEPALLIGUDEM",state:"ANDHRA PRADESH",lat:16.8148,lng:81.5280},
+  {name:"TIRUPATHI",state:"ANDHRA PRADESH",lat:13.6288,lng:79.4192},
+  {name:"VIJAYAWADA",state:"ANDHRA PRADESH",lat:16.5062,lng:80.6480},
+  {name:"VISAKHAPATNAM",state:"ANDHRA PRADESH",lat:17.6868,lng:83.2185},
+  {name:"VIZIANAGARAM",state:"ANDHRA PRADESH",lat:18.1067,lng:83.4205},
+  // ARUNACHAL PRADESH
+  {name:"NAHARLAGUN",state:"ARUNACHAL PRADESH",lat:27.1048,lng:93.6950},
+  // ASSAM
+  {name:"DIBRUGARH",state:"ASSAM",lat:27.4728,lng:94.9120},
+  {name:"GUWAHATI",state:"ASSAM",lat:26.1445,lng:91.7362},
+  {name:"JORHAT",state:"ASSAM",lat:26.7465,lng:94.2026},
+  {name:"SILCHAR",state:"ASSAM",lat:24.8333,lng:92.7789},
+  {name:"TEZPUR",state:"ASSAM",lat:26.6338,lng:92.8037},
+  // BIHAR
+  {name:"ARRAH",state:"BIHAR",lat:25.5561,lng:84.6630},
+  {name:"AURANGABAD",state:"BIHAR",lat:24.7522,lng:84.3739},
+  {name:"BHAGALPUR",state:"BIHAR",lat:25.2424,lng:86.9842},
+  {name:"DARBHANGA",state:"BIHAR",lat:26.1542,lng:85.8918},
+  {name:"GAYA",state:"BIHAR",lat:24.7955,lng:85.0002},
+  {name:"MUZAFFARPUR",state:"BIHAR",lat:26.1209,lng:85.3647},
+  {name:"PATNA",state:"BIHAR",lat:25.5941,lng:85.1376},
+  {name:"PURNEA",state:"BIHAR",lat:25.7771,lng:87.4753},
+  {name:"ROHTAS",state:"BIHAR",lat:24.9917,lng:83.8804},
+  {name:"SAMASTIPUR",state:"BIHAR",lat:25.8667,lng:85.7833},
+  // CHHATTISGARH
+  {name:"BHILAI",state:"CHHATTISGARH",lat:21.2120,lng:81.4285},
+  {name:"BILASPUR",state:"CHHATTISGARH",lat:22.0797,lng:82.1409},
+  {name:"RAIPUR",state:"CHHATTISGARH",lat:21.2514,lng:81.6296},
+  // DELHI
+  {name:"DELHI (EAST)",state:"DELHI",lat:28.6632,lng:77.2774},
+  {name:"DELHI (NORTH)",state:"DELHI",lat:28.7041,lng:77.1025},
+  {name:"DELHI (SOUTH)",state:"DELHI",lat:28.5244,lng:77.1855},
+  {name:"DELHI (WEST)",state:"DELHI",lat:28.6519,lng:76.9916},
+  // GOA
+  {name:"GOA",state:"GOA",lat:15.2993,lng:74.1240},
+  // GUJARAT
+  {name:"AHMEDABAD",state:"GUJARAT",lat:23.0225,lng:72.5714},
+  {name:"ANAND",state:"GUJARAT",lat:22.5645,lng:72.9289},
+  {name:"BHAVNAGAR",state:"GUJARAT",lat:21.7645,lng:72.1519},
+  {name:"BHUJ",state:"GUJARAT",lat:23.2500,lng:69.6669},
+  {name:"GANDHINAGAR",state:"GUJARAT",lat:23.2156,lng:72.6369},
+  {name:"JAMNAGAR",state:"GUJARAT",lat:22.4707,lng:70.0577},
+  {name:"JUNAGADH",state:"GUJARAT",lat:21.5222,lng:70.4579},
+  {name:"MEHSANA",state:"GUJARAT",lat:23.5880,lng:72.3693},
+  {name:"RAJKOT",state:"GUJARAT",lat:22.3039,lng:70.8022},
+  {name:"SURAT",state:"GUJARAT",lat:21.1702,lng:72.8311},
+  {name:"VADODARA",state:"GUJARAT",lat:22.3072,lng:73.1812},
+  // HARYANA
+  {name:"AMBALA",state:"HARYANA",lat:30.3782,lng:76.7767},
+  {name:"FARIDABAD",state:"HARYANA",lat:28.4089,lng:77.3178},
+  {name:"GURUGRAM",state:"HARYANA",lat:28.4595,lng:77.0266},
+  {name:"HISAR",state:"HARYANA",lat:29.1492,lng:75.7217},
+  {name:"KURUKSHETRA",state:"HARYANA",lat:29.9695,lng:76.8783},
+  // HIMACHAL PRADESH
+  {name:"HAMIRPUR",state:"HIMACHAL PRADESH",lat:31.6858,lng:76.5221},
+  {name:"KANGRA",state:"HIMACHAL PRADESH",lat:32.0998,lng:76.2691},
+  {name:"MANDI",state:"HIMACHAL PRADESH",lat:31.7069,lng:76.9318},
+  // JAMMU & KASHMIR
+  {name:"JAMMU",state:"JAMMU & KASHMIR",lat:32.7266,lng:74.8570},
+  {name:"SRINAGAR",state:"JAMMU & KASHMIR",lat:34.0837,lng:74.7973},
+  // JHARKHAND
+  {name:"BOKARO",state:"JHARKHAND",lat:23.7877,lng:86.1497},
+  {name:"DHANBAD",state:"JHARKHAND",lat:23.7957,lng:86.4304},
+  {name:"HAZARIBAGH",state:"JHARKHAND",lat:23.9925,lng:85.3637},
+  {name:"JAMSHEDPUR",state:"JHARKHAND",lat:22.8046,lng:86.2029},
+  {name:"RANCHI",state:"JHARKHAND",lat:23.3441,lng:85.3096},
+  // KARNATAKA
+  {name:"BAGALKOTE",state:"KARNATAKA",lat:16.1766,lng:75.6969},
+  {name:"BALLARI (BELLARY)",state:"KARNATAKA",lat:15.1394,lng:76.9214},
+  {name:"BELAGAVI (BELGAUM)",state:"KARNATAKA",lat:15.8497,lng:74.4977},
+  {name:"BENGALURU",state:"KARNATAKA",lat:12.9716,lng:77.5946},
+  {name:"BIDAR",state:"KARNATAKA",lat:17.9141,lng:77.5199},
+  {name:"CHIKKAMAGALURU",state:"KARNATAKA",lat:13.3153,lng:75.7754},
+  {name:"CHIKKBALLAPUR",state:"KARNATAKA",lat:13.4355,lng:77.7315},
+  {name:"DAVANAGERE",state:"KARNATAKA",lat:14.4644,lng:75.9218},
+  {name:"GADAG",state:"KARNATAKA",lat:15.4162,lng:75.6321},
+  {name:"HAROHALLI-BENGALURU",state:"KARNATAKA",lat:12.6000,lng:77.3500},
+  {name:"HASSAN",state:"KARNATAKA",lat:13.0071,lng:76.0997},
+  {name:"HUBBALLI (HUBLI)",state:"KARNATAKA",lat:15.3647,lng:75.1240},
+  {name:"KALABURAGI (GULBARGA)",state:"KARNATAKA",lat:17.3297,lng:76.8343},
+  {name:"KOLAR",state:"KARNATAKA",lat:13.1362,lng:78.1302},
+  {name:"MANDYA",state:"KARNATAKA",lat:12.5218,lng:76.8951},
+  {name:"MANGALURU (MANGALORE)",state:"KARNATAKA",lat:12.9141,lng:74.8560},
+  {name:"MYSURU (MYSORE)",state:"KARNATAKA",lat:12.2958,lng:76.6394},
+  {name:"SHIVAMOGGA (SHIMOGA)",state:"KARNATAKA",lat:13.9299,lng:75.5681},
+  {name:"TUMAKURU (TUMKUR)",state:"KARNATAKA",lat:13.3409,lng:77.1009},
+  {name:"UDUPI",state:"KARNATAKA",lat:13.3409,lng:74.7421},
+  // KERALA
+  {name:"ALAPPUZHA",state:"KERALA",lat:9.4981,lng:76.3388},
+  {name:"KANNUR",state:"KERALA",lat:11.8745,lng:75.3704},
+  {name:"KASARAGOD",state:"KERALA",lat:12.4996,lng:74.9862},
+  {name:"KOCHI",state:"KERALA",lat:9.9312,lng:76.2673},
+  {name:"KOLLAM",state:"KERALA",lat:8.8932,lng:76.6141},
+  {name:"KOTTAYAM",state:"KERALA",lat:9.5916,lng:76.5222},
+  {name:"KOZHIKODE",state:"KERALA",lat:11.2588,lng:75.7804},
+  {name:"MALAPPURAM",state:"KERALA",lat:11.0510,lng:76.0711},
+  {name:"PALAKKAD",state:"KERALA",lat:10.7867,lng:76.6548},
+  {name:"THIRUVANANTHAPURAM",state:"KERALA",lat:8.5241,lng:76.9366},
+  {name:"THRISSUR",state:"KERALA",lat:10.5276,lng:76.2144},
+  // LADAKH
+  {name:"LEH",state:"LADAKH",lat:34.1526,lng:77.5771},
+  // MADHYA PRADESH
+  {name:"BHOPAL",state:"MADHYA PRADESH",lat:23.2599,lng:77.4126},
+  {name:"GWALIOR",state:"MADHYA PRADESH",lat:26.2183,lng:78.1828},
+  {name:"INDORE",state:"MADHYA PRADESH",lat:22.7196,lng:75.8577},
+  {name:"JABALPUR",state:"MADHYA PRADESH",lat:23.1815,lng:79.9864},
+  {name:"SAGAR",state:"MADHYA PRADESH",lat:23.8388,lng:78.7378},
+  {name:"SATNA",state:"MADHYA PRADESH",lat:24.5674,lng:80.8322},
+  {name:"UJJAIN",state:"MADHYA PRADESH",lat:23.1765,lng:75.7885},
+  // MAHARASHTRA
+  {name:"AHILYANAGAR (AHMEDNAGAR)",state:"MAHARASHTRA",lat:19.0952,lng:74.7496},
+  {name:"AKOLA",state:"MAHARASHTRA",lat:20.7002,lng:77.0082},
+  {name:"AMRAVATI",state:"MAHARASHTRA",lat:20.9374,lng:77.7796},
+  {name:"BARAMATI",state:"MAHARASHTRA",lat:18.1522,lng:74.5756},
+  {name:"BHANDARA",state:"MAHARASHTRA",lat:21.1667,lng:79.6500},
+  {name:"CHANDRAPUR",state:"MAHARASHTRA",lat:19.9615,lng:79.2961},
+  {name:"CHHATRAPATI SAMBHAJINAGAR (AURANGABAD)",state:"MAHARASHTRA",lat:19.8762,lng:75.3433},
+  {name:"DHULE",state:"MAHARASHTRA",lat:20.9042,lng:74.7749},
+  {name:"JALGAON",state:"MAHARASHTRA",lat:21.0077,lng:75.5626},
+  {name:"JALNA",state:"MAHARASHTRA",lat:19.8347,lng:75.8816},
+  {name:"KOLHAPUR",state:"MAHARASHTRA",lat:16.7050,lng:74.2433},
+  {name:"LATUR",state:"MAHARASHTRA",lat:18.4088,lng:76.5604},
+  {name:"MUMBAI",state:"MAHARASHTRA",lat:19.0760,lng:72.8777},
+  {name:"NAGPUR",state:"MAHARASHTRA",lat:21.1458,lng:79.0882},
+  {name:"NANDED",state:"MAHARASHTRA",lat:19.1383,lng:77.3210},
+  {name:"NASHIK",state:"MAHARASHTRA",lat:20.0059,lng:73.7898},
+  {name:"NAVI MUMBAI",state:"MAHARASHTRA",lat:19.0330,lng:73.0297},
+  {name:"PANDHARPUR",state:"MAHARASHTRA",lat:17.6805,lng:75.3298},
+  {name:"PUNE",state:"MAHARASHTRA",lat:18.5204,lng:73.8567},
+  {name:"RASAYANI",state:"MAHARASHTRA",lat:18.8233,lng:73.1638},
+  {name:"SANGAMNER",state:"MAHARASHTRA",lat:19.5762,lng:74.2100},
+  {name:"SANGLI",state:"MAHARASHTRA",lat:16.8524,lng:74.5815},
+  {name:"SATARA",state:"MAHARASHTRA",lat:17.6805,lng:73.9944},
+  {name:"SOLAPUR",state:"MAHARASHTRA",lat:17.6599,lng:75.9064},
+  {name:"THANE",state:"MAHARASHTRA",lat:19.2183,lng:72.9781},
+  {name:"VASAI",state:"MAHARASHTRA",lat:19.3919,lng:72.8397},
+  {name:"WARDHA",state:"MAHARASHTRA",lat:20.7453,lng:78.6022},
+  // MANIPUR
+  {name:"IMPHAL",state:"MANIPUR",lat:24.8170,lng:93.9368},
+  // MEGHALAYA
+  {name:"SHILLONG",state:"MEGHALAYA",lat:25.5788,lng:91.8933},
+  // MIZORAM
+  {name:"AIZAWL",state:"MIZORAM",lat:23.7271,lng:92.7176},
+  // NAGALAND
+  {name:"DIMAPUR",state:"NAGALAND",lat:25.9091,lng:93.7265},
+  {name:"KOHIMA",state:"NAGALAND",lat:25.6751,lng:94.1086},
+  // ODISHA
+  {name:"BALASORE",state:"ODISHA",lat:21.4942,lng:86.9355},
+  {name:"BERHAMPUR (GANJAM)",state:"ODISHA",lat:19.3149,lng:84.7941},
+  {name:"BHUBANESWAR",state:"ODISHA",lat:20.2961,lng:85.8245},
+  {name:"CUTTACK",state:"ODISHA",lat:20.4625,lng:85.8830},
+  {name:"DHENKANAL",state:"ODISHA",lat:20.6524,lng:85.5977},
+  {name:"JEYPORE",state:"ODISHA",lat:18.8542,lng:82.5717},
+  {name:"ROURKELA",state:"ODISHA",lat:22.2604,lng:84.8536},
+  {name:"SAMBALPUR",state:"ODISHA",lat:21.4669,lng:83.9812},
+  // PUDUCHERRY
+  {name:"PUDUCHERRY",state:"PUDUCHERRY",lat:11.9416,lng:79.8083},
+  // PUNJAB
+  {name:"AMRITSAR",state:"PUNJAB",lat:31.6340,lng:74.8723},
+  {name:"BATHINDA",state:"PUNJAB",lat:30.2110,lng:74.9455},
+  {name:"CHANDIGARH-MOHALI",state:"PUNJAB",lat:30.7333,lng:76.7794},
+  {name:"JALANDHAR",state:"PUNJAB",lat:31.3260,lng:75.5762},
+  {name:"LUDHIANA",state:"PUNJAB",lat:30.9010,lng:75.8573},
+  {name:"PATIALA",state:"PUNJAB",lat:30.3398,lng:76.3869},
+  // RAJASTHAN
+  {name:"AJMER",state:"RAJASTHAN",lat:26.4499,lng:74.6399},
+  {name:"ALWAR",state:"RAJASTHAN",lat:27.5530,lng:76.6346},
+  {name:"BHARATPUR",state:"RAJASTHAN",lat:27.2152,lng:77.5030},
+  {name:"BHILWARA",state:"RAJASTHAN",lat:25.3488,lng:74.6269},
+  {name:"BIKANER",state:"RAJASTHAN",lat:28.0229,lng:73.3119},
+  {name:"DAUSA",state:"RAJASTHAN",lat:26.8906,lng:76.3348},
+  {name:"HANUMANGARH",state:"RAJASTHAN",lat:29.5830,lng:74.3290},
+  {name:"JAIPUR",state:"RAJASTHAN",lat:26.9124,lng:75.7873},
+  {name:"JODHPUR",state:"RAJASTHAN",lat:26.2389,lng:73.0243},
+  {name:"KOTA",state:"RAJASTHAN",lat:25.2138,lng:75.8648},
+  {name:"SIKAR",state:"RAJASTHAN",lat:27.6094,lng:75.1397},
+  {name:"SRI GANGANAGAR",state:"RAJASTHAN",lat:29.9200,lng:73.8770},
+  {name:"UDAIPUR",state:"RAJASTHAN",lat:24.5854,lng:73.7125},
+  // SIKKIM
+  {name:"GANGTOK",state:"SIKKIM",lat:27.3389,lng:88.6065},
+  // TAMILNADU
+  {name:"CHENNAI",state:"TAMILNADU",lat:13.0827,lng:80.2707},
+  {name:"COIMBATORE",state:"TAMILNADU",lat:11.0168,lng:76.9558},
+  {name:"KANCHEEPURAM",state:"TAMILNADU",lat:12.8185,lng:79.6947},
+  {name:"MADURAI",state:"TAMILNADU",lat:9.9252,lng:78.1198},
+  {name:"NAGERCOIL",state:"TAMILNADU",lat:8.1833,lng:77.4119},
+  {name:"NAMAKKAL",state:"TAMILNADU",lat:11.2230,lng:78.1670},
+  {name:"SALEM",state:"TAMILNADU",lat:11.6643,lng:78.1460},
+  {name:"THANJAVUR",state:"TAMILNADU",lat:10.7870,lng:79.1378},
+  {name:"TIRUCHIRAPPALLI",state:"TAMILNADU",lat:10.7905,lng:78.7047},
+  {name:"TIRUNELVELI",state:"TAMILNADU",lat:8.7139,lng:77.7567},
+  {name:"VELLORE",state:"TAMILNADU",lat:12.9165,lng:79.1325},
+  {name:"VIRUDHUNAGAR",state:"TAMILNADU",lat:9.5851,lng:77.9624},
+  // TELANGANA
+  {name:"ADILABAD",state:"TELANGANA",lat:19.6641,lng:78.5320},
+  {name:"HYDERABAD",state:"TELANGANA",lat:17.3850,lng:78.4867},
+  {name:"KARIMNAGAR",state:"TELANGANA",lat:18.4386,lng:79.1288},
+  {name:"KHAMMAM",state:"TELANGANA",lat:17.2473,lng:80.1514},
+  {name:"KODAD",state:"TELANGANA",lat:16.9972,lng:79.9603},
+  {name:"KOTHAGUDEM",state:"TELANGANA",lat:17.5493,lng:80.6317},
+  {name:"MAHABUBNAGAR",state:"TELANGANA",lat:16.7371,lng:77.9879},
+  {name:"NALGONDA",state:"TELANGANA",lat:17.0575,lng:79.2680},
+  {name:"NIZAMABAD",state:"TELANGANA",lat:18.6725,lng:78.0941},
+  {name:"SATHUPALLY",state:"TELANGANA",lat:17.2443,lng:80.8520},
+  {name:"SIDDIPET",state:"TELANGANA",lat:18.1018,lng:78.8520},
+  {name:"SURYAPET",state:"TELANGANA",lat:17.1391,lng:79.6221},
+  {name:"WARANGAL",state:"TELANGANA",lat:17.9784,lng:79.5941},
+  // TRIPURA
+  {name:"AGARTALA",state:"TRIPURA",lat:23.8315,lng:91.2868},
+  // UTTAR PRADESH
+  {name:"AGRA",state:"UTTAR PRADESH",lat:27.1767,lng:78.0081},
+  {name:"ALIGARH",state:"UTTAR PRADESH",lat:27.8974,lng:78.0880},
+  {name:"BAREILLY",state:"UTTAR PRADESH",lat:28.3670,lng:79.4304},
+  {name:"GHAZIABAD",state:"UTTAR PRADESH",lat:28.6692,lng:77.4538},
+  {name:"GORAKHPUR",state:"UTTAR PRADESH",lat:26.7606,lng:83.3732},
+  {name:"GREATER NOIDA",state:"UTTAR PRADESH",lat:28.4744,lng:77.5040},
+  {name:"JHANSI",state:"UTTAR PRADESH",lat:25.4484,lng:78.5685},
+  {name:"KANPUR",state:"UTTAR PRADESH",lat:26.4499,lng:80.3319},
+  {name:"LUCKNOW",state:"UTTAR PRADESH",lat:26.8467,lng:80.9462},
+  {name:"MATHURA",state:"UTTAR PRADESH",lat:27.4924,lng:77.6737},
+  {name:"MEERUT",state:"UTTAR PRADESH",lat:28.9845,lng:77.7064},
+  {name:"MORADABAD",state:"UTTAR PRADESH",lat:28.8386,lng:78.7733},
+  {name:"MUZAFFARNAGAR",state:"UTTAR PRADESH",lat:29.4727,lng:77.7085},
+  {name:"NOIDA",state:"UTTAR PRADESH",lat:28.5355,lng:77.3910},
+  {name:"PRAYAGRAJ (ALLAHABAD)",state:"UTTAR PRADESH",lat:25.4358,lng:81.8463},
+  {name:"SAHARANPUR",state:"UTTAR PRADESH",lat:29.9680,lng:77.5552},
+  {name:"VARANASI",state:"UTTAR PRADESH",lat:25.3176,lng:82.9739},
+  // UTTARAKHAND
+  {name:"DEHRADUN",state:"UTTARAKHAND",lat:30.3165,lng:78.0322},
+  {name:"HALDWANI",state:"UTTARAKHAND",lat:29.2183,lng:79.5130},
+  {name:"ROORKEE",state:"UTTARAKHAND",lat:29.8543,lng:77.8880},
+  // WEST BENGAL
+  {name:"ASANSOL",state:"WEST BENGAL",lat:23.6739,lng:86.9524},
+  {name:"BAHARAMPUR (MURSHIDABAD)",state:"WEST BENGAL",lat:24.1016,lng:88.2507},
+  {name:"BURDWAN",state:"WEST BENGAL",lat:23.2324,lng:87.8615},
+  {name:"DURGAPUR",state:"WEST BENGAL",lat:23.5204,lng:87.3119},
+  {name:"HOWRAH",state:"WEST BENGAL",lat:22.5958,lng:88.2636},
+  {name:"KALYANI (NADIA)",state:"WEST BENGAL",lat:22.9750,lng:88.4344},
+  {name:"KHARAGPUR-KOLAGHAT",state:"WEST BENGAL",lat:22.3460,lng:87.2320},
+  {name:"KOLKATA (NORTH)",state:"WEST BENGAL",lat:22.6044,lng:88.3556},
+  {name:"KOLKATA (SOUTH)",state:"WEST BENGAL",lat:22.5204,lng:88.3617},
+  {name:"SILIGURI",state:"WEST BENGAL",lat:26.7271,lng:88.3953},
+];
+
+// JEE Advanced official exam centres (IIT zone cities)
+const CENTRES = [
+  "CHENNAI","MUMBAI","KOLKATA (NORTH)","KOLKATA (SOUTH)","DELHI (SOUTH)","DELHI (NORTH)",
+  "HYDERABAD","BENGALURU","PUNE","AHMEDABAD","JAIPUR","LUCKNOW","PATNA","BHUBANESWAR",
+  "GUWAHATI","CHANDIGARH-MOHALI","VARANASI","KANPUR","NAGPUR","KOCHI","VISAKHAPATNAM",
+  "COIMBATORE","INDORE","BHOPAL","RANCHI","SURAT","VADODARA","RAJKOT","AMRITSAR",
+  "LUDHIANA","JODHPUR","KOTA","AGRA","MEERUT","GHAZIABAD","NOIDA","GREATER NOIDA",
+  "FARIDABAD","GURUGRAM","DEHRADUN","ROORKEE","JAMSHEDPUR","DHANBAD","BOKARO",
+  "RAIPUR","BHILAI","TIRUPATHI","MADURAI","WARANGAL","NASHIK","AURANGABAD",
+  "CHHATRAPATI SAMBHAJINAGAR (AURANGABAD)","SOLAPUR","MYSURU (MYSORE)",
+  "HUBBALLI (HUBLI)","MANGALURU (MANGALORE)","THIRUVANANTHAPURAM","KOZHIKODE",
+  "TIRUCHIRAPPALLI","SALEM","VELLORE","PUDUCHERRY","VIJAYAWADA","GUNTUR",
+  "KAKINADA","RAJAHMUNDRY","NELLORE","SILIGURI","DURGAPUR","ASANSOL",
+  "BURDWAN","HOWRAH","IMPHAL","SHILLONG","AGARTALA","AIZAWL","DIMAPUR",
+  "SRINAGAR","JAMMU","LEH","GANGTOK","DIBRUGARH","JORHAT"
+];
+
+// ============================================================
+// MAP PROJECTION: Convert lat/lng to SVG coordinates
+// ============================================================
+function project(lat, lng) {
+  // India bounding: lat 8-37, lng 68-97
+  const minLat = 7, maxLat = 37.5;
+  const minLng = 67, maxLng = 98;
+  const svgMinX = 210, svgMaxX = 790;
+  const svgMinY = 65, svgMaxY = 750;
+
+  const x = svgMinX + (lng - minLng) / (maxLng - minLng) * (svgMaxX - svgMinX);
+  const y = svgMaxY - (lat - minLat) / (maxLat - minLat) * (svgMaxY - svgMinY);
+  return { x, y };
+}
+
+// ============================================================
+// HAVERSINE DISTANCE
+// ============================================================
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ============================================================
+// BUILD SIDEBAR
+// ============================================================
+const stateMap = {};
+CITIES.forEach(c => {
+  if (!stateMap[c.state]) stateMap[c.state] = [];
+  stateMap[c.state].push(c);
+});
+
+const cityList = document.getElementById('cityList');
+let selectedCity = null;
+
+function buildSidebar(filter = '') {
+  cityList.innerHTML = '';
+  const lf = filter.toLowerCase();
+  Object.entries(stateMap).sort((a,b) => a[0].localeCompare(b[0])).forEach(([state, cities]) => {
+    const filteredCities = filter ? cities.filter(c =>
+      c.name.toLowerCase().includes(lf) || state.toLowerCase().includes(lf)
+    ) : cities;
+    if (!filteredCities.length) return;
+
+    const group = document.createElement('div');
+    group.className = 'state-group';
+
+    const header = document.createElement('div');
+    header.className = 'state-header';
+    header.innerHTML = `<span>${state}</span><span class="chevron">▾</span>`;
+    header.onclick = () => {
+      header.classList.toggle('collapsed');
+      citiesDiv.classList.toggle('hidden');
+    };
+
+    const citiesDiv = document.createElement('div');
+    citiesDiv.className = 'state-cities';
+
+    filteredCities.forEach(city => {
+      const item = document.createElement('div');
+      item.className = 'city-item' + (selectedCity === city ? ' selected' : '');
+      item.dataset.cityName = city.name;
+      item.innerHTML = `<div class="city-dot-indicator"></div>${city.name}`;
+      item.onclick = () => selectCity(city);
+      citiesDiv.appendChild(item);
+    });
+
+    group.appendChild(header);
+    group.appendChild(citiesDiv);
+    cityList.appendChild(group);
+  });
+}
+
+document.getElementById('citySearch').addEventListener('input', e => {
+  buildSidebar(e.target.value);
+});
+
+// ============================================================
+// MAP RENDERING
+// ============================================================
+const svg = document.getElementById('indiaMap');
+const dotsLayer = document.getElementById('dotsLayer');
+const linesLayer = document.getElementById('linesLayer');
+const tooltip = document.getElementById('tooltip');
+
+// India outline — simplified state paths
+// Using a pre-defined simplified SVG path for India
+const INDIA_OUTLINE = `M 395 68 L 410 72 L 430 80 L 445 88 L 460 95 L 475 88 L 490 82 L 505 78 L 520 75 L 535 80 L 548 90 L 558 102 L 565 115 L 568 128 L 562 140 L 555 150 L 548 162 L 542 175 L 538 188 L 532 200 L 525 210 L 518 222 L 510 232 L 502 242 L 495 252 L 490 265 L 488 278 L 485 290 L 480 300 L 472 308 L 462 315 L 452 320 L 442 328 L 435 338 L 430 350 L 428 362 L 425 375 L 420 388 L 415 398 L 410 408 L 405 418 L 400 430 L 395 445 L 390 460 L 385 475 L 378 490 L 370 505 L 360 518 L 348 530 L 335 540 L 325 548 L 315 555 L 308 562 L 302 570 L 298 580 L 295 590 L 292 600 L 290 612 L 292 625 L 298 635 L 306 645 L 315 652 L 325 658 L 332 665 L 338 675 L 342 685 L 345 695 L 348 705 L 350 715 L 348 725 L 342 732 L 332 735 L 322 732 L 312 726 L 302 718 L 295 708 L 290 698 L 285 688 L 278 680 L 268 675 L 258 672 L 248 672 L 238 675 L 230 682 L 225 692 L 222 702 L 222 712 L 225 720 L 230 728 L 235 735 L 238 742 L 235 748 L 228 752 L 218 755 L 208 758 L 200 762 L 196 770 L 198 778 L 206 782 L 218 782 L 230 778 L 242 772 L 252 768 L 262 770 L 270 778 L 275 788 L 278 798 L 278 808 L 275 818 L 268 825 L 260 830 L 255 838 L 255 848 L 260 855 L 270 858 L 282 858 L 292 852 L 300 842 L 305 830 L 308 818 L 312 808 L 318 800 L 328 795 L 340 795 L 350 800 L 358 808 L 362 818 L 360 828 L 355 838 L 348 848 L 342 858 L 340 868 L 345 878 L 355 885 L 368 888 L 382 888 L 395 882 L 406 872 L 415 860 L 420 848 L 422 835 L 420 822 L 415 812 L 408 805 L 402 800 L 398 795 L 398 788 L 402 782 L 410 778 L 420 778 L 430 782 L 440 790 L 448 800 L 455 810 L 460 820 L 462 832 L 460 842 L 455 850 L 448 858 L 440 868 L 435 878 L 435 888 L 440 895 L 450 898 L 462 898 L 474 892 L 484 882 L 490 870 L 493 858 L 492 845 L 488 833 L 482 822 L 475 812 L 468 802 L 462 792 L 460 782 L 462 772 L 468 765 L 478 760 L 490 758 L 502 760 L 513 765 L 522 772 L 528 782 L 530 792 L 528 802 L 522 812 L 515 820 L 508 828 L 502 838 L 498 848 L 498 858 L 502 865 L 510 868 L 522 868 L 534 862 L 544 852 L 550 840 L 553 828 L 552 815 L 548 802 L 542 790 L 536 780 L 530 772 L 526 765 L 525 758 L 528 752 L 535 748 L 545 748 L 556 752 L 565 760 L 572 770 L 576 780 L 577 792 L 575 803 L 570 812 L 562 820 L 554 828 L 548 836 L 545 845 L 545 854 L 550 860 L 558 862 L 568 860 L 578 852 L 586 840 L 590 828 L 590 815 L 586 802 L 580 792 L 572 782 L 566 772 L 562 762 L 562 752 L 568 745 L 578 742 L 590 742 L 600 748 L 608 758 L 613 768 L 615 778 L 613 788 L 608 797 L 600 805 L 592 812 L 585 820 L 580 830 L 578 840 L 580 850 L 586 858 L 596 862 L 608 860 L 618 852 L 625 840 L 628 828 L 626 815 L 620 802 L 612 792 L 604 782 L 598 772 L 595 762 L 598 752 L 606 745 L 618 742 L 630 742 L 640 748 L 646 758 L 648 768 L 645 778 L 638 788 L 630 798 L 622 808 L 618 818 L 618 828 L 622 838 L 630 842 L 640 840 L 650 832 L 656 820 L 658 808 L 655 795 L 648 782 L 640 772 L 635 762 L 635 752 L 640 745 L 650 742 L 662 742 L 672 748 L 678 758 L 680 768 L 678 778 L 672 788 L 665 798 L 660 808 L 658 820 L 660 830 L 668 838 L 680 842 L 692 840 L 700 830 L 702 820 L 700 810 L 694 800 L 686 792 L 680 782 L 678 772 L 682 762 L 692 758 L 704 758 L 714 765 L 720 775 L 722 785 L 718 795 L 712 802 L 704 808 L 698 815 L 695 825 L 698 835 L 708 842 L 720 842 L 730 835 L 736 822 L 736 810 L 730 798 L 720 790 L 710 785 L 705 778 L 708 768 L 718 762 L 730 762 L 742 768 L 750 778 L 755 788 L 755 798 L 750 808 L 742 815 L 735 820 L 730 828 L 730 838 L 738 842 L 750 838 L 759 828 L 762 815 L 758 802 L 750 792 L 742 782 L 740 772 L 748 762 L 760 758 L 772 762 L 780 772 L 782 782 L 778 792 L 770 800 L 762 810 L 758 820 L 762 830 L 772 835 L 784 832 L 790 820`;
+
+// Render India map
+function renderMap() {
+  const statesLayer = document.getElementById('statesLayer');
+
+  // Draw a simplified India shape
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', buildIndiaPath());
+  path.setAttribute('class', 'state-path');
+  statesLayer.appendChild(path);
+
+  // Draw dots for all cities
+  CITIES.forEach(city => {
+    const {x, y} = project(city.lat, city.lng);
+    const isCenter = CENTRES.includes(city.name);
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'map-city-dot' + (isCenter ? ' is-center' : ''));
+    g.setAttribute('data-city', city.name);
+
+    // Pulse circle
+    const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    pulse.setAttribute('cx', x);
+    pulse.setAttribute('cy', y);
+    pulse.setAttribute('r', isCenter ? 7 : 5);
+    pulse.setAttribute('class', 'pulse');
+    g.appendChild(pulse);
+
+    // Main dot
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', isCenter ? 4 : 3);
+    circle.setAttribute('class', 'main');
+    g.appendChild(circle);
+
+    g.addEventListener('mouseenter', (e) => showTooltip(e, city, isCenter));
+    g.addEventListener('mouseleave', hideTooltip);
+    g.addEventListener('click', () => selectCity(city));
+
+    dotsLayer.appendChild(g);
+  });
+}
+
+function buildIndiaPath() {
+  // Build a simplified but recognizable India SVG path by plotting state boundaries
+  // Using coordinate array of India's outline
+  const pts = [
+    // North: J&K, Himachal, Uttarakhand
+    [395,68],[430,65],[465,70],[495,75],[525,78],[550,82],[568,95],[572,110],
+    [568,125],[558,140],[548,155],[540,170],[532,185],[525,200],[518,215],
+    [510,228],[502,240],[495,252],[490,265],
+    // Northeast bump
+    [495,258],[510,255],[528,258],[545,265],[562,270],[575,278],[582,290],
+    [578,302],[568,312],[555,318],[540,322],[525,328],[512,335],[500,342],
+    [490,350],[480,360],[470,368],[460,375],[450,382],[440,390],[430,400],
+    [420,410],[410,420],[400,432],[392,445],[385,458],[378,472],[370,485],
+    [360,498],[348,510],[335,520],[322,528],[310,535],[300,540],[292,548],
+    [286,558],[282,568],[280,580],[280,592],[282,604],[286,615],[290,625],
+    [295,635],[300,645],[305,655],[308,665],[310,678],[308,690],[302,700],
+    [295,710],[288,720],[282,730],[280,742],[282,752],[288,760],[296,768],
+    [305,775],[312,782],[316,790],[314,798],[308,805],[298,810],[288,812],
+    [278,810],[268,806],[258,800],[248,795],[240,792],[232,792],[226,796],
+    [222,804],[222,814],[226,824],[234,832],[242,838],[248,842],[250,850],
+    [248,858],[242,865],[232,870],[222,872],[214,876],[210,884],[214,892],
+    [224,898],[236,900],[250,898],[262,892],[272,882],[278,870],[280,858],
+    [280,846],[278,835],[275,825],[272,815],[272,805],[276,796],[284,790],
+    [295,788],[308,790],[320,796],[330,806],[336,818],[338,830],[336,842],
+    [330,852],[322,860],[315,868],[312,878],[315,888],[324,895],[336,898],
+    [350,898],[362,892],[372,882],[378,870],[380,858],[376,845],[368,832],
+    [360,820],[354,808],[352,797],[355,788],[362,782],[374,780],[388,782],
+    [400,788],[410,798],[416,810],[418,822],[415,835],[408,845],[400,854],
+    [392,862],[388,872],[388,882],[394,890],[406,895],[420,895],[432,888],
+    [442,877],[448,865],[448,853],[444,841],[436,830],[428,820],[422,810],
+    [420,800],[422,790],[428,782],[438,778],[450,778],[462,782],[472,790],
+    [480,800],[485,812],[485,824],[480,835],[472,845],[462,855],[455,865],
+    [452,875],[455,885],[465,892],[478,895],[492,892],[504,882],[512,870],
+    [515,858],[512,845],[505,832],[496,820],[488,810],[484,800],[485,790],
+    [492,782],[504,778],[518,778],[530,784],[540,794],[546,806],[548,818],
+    [545,830],[538,840],[528,850],[520,860],[515,870],[516,880],[524,888],
+    [538,892],[554,888],[566,878],[574,865],[576,852],[572,838],[562,825],
+    [552,812],[545,800],[542,788],[545,778],[554,772],[568,770],[582,772],
+    [594,778],[602,788],[606,800],[605,812],[598,823],[588,832],[578,840],
+    [570,850],[566,862],[568,873],[578,880],[592,882],[608,878],[620,868],
+    [628,855],[630,842],[625,828],[615,815],[605,803],[598,792],[596,782],
+    [600,772],[612,766],[626,766],[640,772],[650,782],[656,794],[655,806],
+    [648,817],[638,825],[628,832],[620,840],[616,852],[620,863],[632,870],
+    [648,870],[662,862],[671,848],[674,833],[670,818],[660,805],[648,795],
+    [640,785],[638,775],[645,765],[660,760],[676,760],[690,768],[700,780],
+    [705,793],[704,806],[697,818],[686,828],[676,836],[670,846],[670,858],
+    [678,868],[694,872],[710,868],[722,856],[728,843],[726,829],[718,815],
+    [706,803],[696,792],[690,782],[690,771],[700,763],[715,758],[730,758],
+    [742,765],[750,776],[752,788],[748,800],[738,810],[728,818],[722,828],
+    [722,839],[730,847],[744,848],[756,840],[762,827],[760,813],[750,800],
+    [738,788],[730,776],[730,764],[740,756],[756,754],[770,758],[780,770],
+    [784,782],[782,795],[774,806],[764,815],[758,825],[758,836],[768,842],
+    [782,840],[790,830],[790,818],[784,805],[775,793],[768,782],[768,770],
+    [776,760],[790,756],
+  ];
+
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  pts.slice(1).forEach(p => d += ` L ${p[0]} ${p[1]}`);
+  d += ' Z';
+  return d;
+}
+
+// ============================================================
+// SELECT CITY
+// ============================================================
+function selectCity(city) {
+  selectedCity = city;
+
+  // Update sidebar highlight
+  document.querySelectorAll('.city-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.cityName === city.name);
+  });
+
+  // Clear old lines
+  linesLayer.innerHTML = '';
+
+  // Reset all dots
+  document.querySelectorAll('.map-city-dot').forEach(g => {
+    g.classList.remove('selected-city', 'nearby-center');
+  });
+
+  // Find nearest 10 centres
+  const centres = CITIES.filter(c => CENTRES.includes(c.name));
+  const withDist = centres.map(c => ({
+    ...c,
+    dist: haversine(city.lat, city.lng, c.lat, c.lng)
+  })).sort((a,b) => a.dist - b.dist).slice(0, 10);
+
+  // Highlight selected city dot
+  const selectedDot = document.querySelector(`.map-city-dot[data-city="${CSS.escape(city.name)}"]`);
+  if (selectedDot) selectedDot.classList.add('selected-city');
+
+  // Draw lines and highlight centres
+  const {x: cx, y: cy} = project(city.lat, city.lng);
+
+  withDist.forEach((centre, i) => {
+    const {x: ex, y: ey} = project(centre.lat, centre.lng);
+
+    // Line
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.setAttribute('class', 'connection-line');
+    line.style.opacity = 1 - i * 0.08;
+    linesLayer.appendChild(line);
+
+    // Distance label on line midpoint
+    const mx = (cx + ex) / 2, my = (cy + ey) / 2;
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', mx);
+    label.setAttribute('y', my - 4);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('fill', '#f59e0b');
+    label.setAttribute('font-size', '7');
+    label.setAttribute('font-family', 'Space Mono, monospace');
+    label.setAttribute('pointer-events', 'none');
+    label.textContent = `${Math.round(centre.dist)}km`;
+    linesLayer.appendChild(label);
+
+    // Highlight centre dot
+    const dot = document.querySelector(`.map-city-dot[data-city="${CSS.escape(centre.name)}"]`);
+    if (dot) dot.classList.add('nearby-center');
+  });
+
+  // Show results panel
+  showResults(city, withDist);
+
+  // Scroll city into view
+  const sidebarItem = document.querySelector(`.city-item[data-city-name="${CSS.escape(city.name)}"]`);
+  if (sidebarItem) sidebarItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showResults(city, centres) {
+  const panel = document.getElementById('resultsPanel');
+  panel.classList.add('visible');
+  panel.innerHTML = `<h3>🎯 Nearest 10 Centres to ${city.name}</h3>`;
+
+  centres.forEach((c, i) => {
+    const item = document.createElement('div');
+    item.className = 'result-item';
+    item.innerHTML = `
+      <span class="rank-badge">#${i+1}</span>
+      <div style="flex:1">
+        <div class="result-name">${c.name}</div>
+        <div class="result-state">${c.state}</div>
+      </div>
+      <span class="result-dist">${Math.round(c.dist)} km</span>
+    `;
+    item.onclick = () => {
+      const dot = document.querySelector(`.map-city-dot[data-city="${CSS.escape(c.name)}"]`);
+      if (dot) {
+        const circle = dot.querySelector('circle.main');
+        if (circle) {
+          const rx = parseFloat(circle.getAttribute('cx'));
+          const ry = parseFloat(circle.getAttribute('cy'));
+          panTo(rx, ry);
+        }
+      }
+    };
+    panel.appendChild(item);
+  });
+}
+
+// ============================================================
+// TOOLTIP
+// ============================================================
+let tooltipTimeout;
+function showTooltip(e, city, isCenter) {
+  clearTimeout(tooltipTimeout);
+  tooltip.style.display = 'block';
+  tooltip.querySelector('.t-name').textContent = city.name;
+  tooltip.querySelector('.t-state').textContent = city.state;
+  const typeEl = tooltip.querySelector('.t-type');
+  typeEl.textContent = isCenter ? 'EXAM CENTRE' : 'EXAM CITY';
+  typeEl.className = 't-type ' + (isCenter ? 'center' : 'city');
+
+  const distEl = tooltip.querySelector('.t-dist');
+  if (selectedCity && selectedCity.name !== city.name) {
+    const d = haversine(selectedCity.lat, selectedCity.lng, city.lat, city.lng);
+    distEl.textContent = `${Math.round(d)} km from ${selectedCity.name}`;
+    distEl.style.display = 'block';
+  } else {
+    distEl.style.display = 'none';
+  }
+
+  const rect = document.querySelector('.map-area').getBoundingClientRect();
+  tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+  tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+}
+function hideTooltip() {
+  tooltipTimeout = setTimeout(() => { tooltip.style.display = 'none'; }, 100);
+}
+
+// ============================================================
+// ZOOM/PAN
+// ============================================================
+let scale = 1, translateX = 0, translateY = 0;
+let isPanning = false, startX, startY, startTX, startTY;
+
+function applyTransform() {
+  const g = document.querySelector('#indiaMap > g') ? svg : svg;
+  svg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+  svg.style.transformOrigin = 'center center';
+}
+
+document.getElementById('zoomIn').onclick = () => { scale = Math.min(scale * 1.3, 8); applyTransform(); };
+document.getElementById('zoomOut').onclick = () => { scale = Math.max(scale / 1.3, 0.5); applyTransform(); };
+document.getElementById('zoomReset').onclick = () => { scale = 1; translateX = 0; translateY = 0; applyTransform(); };
+
+svg.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  isPanning = true;
+  startX = e.clientX; startY = e.clientY;
+  startTX = translateX; startTY = translateY;
+});
+window.addEventListener('mousemove', e => {
+  if (!isPanning) return;
+  translateX = startTX + (e.clientX - startX);
+  translateY = startTY + (e.clientY - startY);
+  applyTransform();
+});
+window.addEventListener('mouseup', () => isPanning = false);
+
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.85 : 1.18;
+  scale = Math.min(Math.max(scale * delta, 0.5), 8);
+  applyTransform();
+}, { passive: false });
+
+function panTo(x, y) {
+  // Centre on SVG coordinate
+  const svgRect = svg.getBoundingClientRect();
+  const areaRect = document.querySelector('.map-area').getBoundingClientRect();
+  // No-op for now since we're using full SVG viewBox
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  const states = new Set(CITIES.map(c => c.state));
+  document.getElementById('statCities').textContent = CITIES.length;
+  document.getElementById('statCentres').textContent = CENTRES.length;
+  document.getElementById('statStates').textContent = states.size;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+buildSidebar();
+renderMap();
+updateStats();
+</script>
+</body>
+</html>
